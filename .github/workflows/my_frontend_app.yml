@@ -43,5 +43,5 @@ jobs:
         run: |
           aws amplify start-deployment \
             --app-id daej0ec32nb5y \
-            --branch-name main \
+            --branch-name staging \
             --source-url "${{ env.DEPLOY_URL }}"
