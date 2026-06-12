@@ -1,0 +1,53 @@
+name: Deploy to AWS Amplify (Manual)
+
+on:
+  push:
+    branches:
+      - main # Change this to match your production branch name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Pull the codebase to the runner environment
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2. Initialize Node.js environment
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-size: 20
+        cache: 'npm'
+
+    # 3. Download dependencies and build project
+    - name: Install and Build Application
+      run: |
+        npm ci
+        npm run build 
+        # Note: Ensure this generates your static asset folder (e.g., 'dist', 'build', or 'out')
+
+    # 4. Zip up the compilation output contents 
+    # CRITICAL: Zip the CONTENTS of the folder, not the parent folder itself.
+    - name: Zip Build Artifacts
+      run: |
+        cd dist # Replace 'dist' with your framework's build output directory (e.g., build, out, .next)
+        zip -r ../deploy.zip . 
+        cd ..
+
+    # 5. Authenticate with AWS CLI
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # Replace with your specific AWS Amplify App region
+
+    # 6. Deploy the artifact to AWS Amplify via CLI
+    - name: Publish Artifact to Amplify
+      run: |
+        aws amplify start-deployment \
+          --app-id YOUR_AMPLIFY_APP_ID \
+          --branch-name main \
+          --source-url deploy.zip
