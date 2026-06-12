@@ -35,7 +35,8 @@ jobs:
         cd dist # Replace 'dist' with your framework's build output directory (e.g., build, out, .next)
         zip -r ../deploy.zip . 
         cd ..
-
+        aws s3 cp deploy.zip s3://mys3bucket02071992/deploy.zip
+        URL=$(aws s3 presign s3://mys3bucket02071992/deploy.zip --expires-in 600)
     # 5. Authenticate with AWS CLI
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -50,4 +51,4 @@ jobs:
         aws amplify start-deployment \
           --app-id d1fcddosbju942 \
           --branch-name main \
-          --source-url deploy.zip
+          --source-url "$URL"
