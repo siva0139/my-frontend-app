@@ -3,52 +3,45 @@ name: Deploy to AWS Amplify (Manual)
 on:
   push:
     branches:
-      - main # Change this to match your production branch name
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    # 1. Pull the codebase to the runner environment
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # 2. Initialize Node.js environment
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-size: 20
-        cache: 'npm'
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    # 3. Download dependencies and build project
-    - name: Install and Build Application
-      run: |
-        npm ci
-        npm run build 
-        # Note: Ensure this generates your static asset folder (e.g., 'dist', 'build', or 'out')
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    # 4. Zip up the compilation output contents 
-    # CRITICAL: Zip the CONTENTS of the folder, not the parent folder itself.
-    - name: Zip Build Artifacts
-      run: |
-        cd dist # Replace 'dist' with your framework's build output directory (e.g., build, out, .next)
-        zip -r ../deploy.zip . 
-        cd ..
-        aws s3 cp deploy.zip s3://mys3bucket02071992/deploy.zip
-        URL=$(aws s3 presign s3://mys3bucket02071992/deploy.zip --expires-in 600)
-    # 5. Authenticate with AWS CLI
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: AKIAVKPDLT3TXKKK227D
-        aws-secret-access-key: QEXkdJxQLjbsfN9bN8rj/2mHoL2/UbE5YIrvBQ81
-        aws-region: us-east-1 # Replace with your specific AWS Amplify App region
+      - name: Install and Build Application
+        run: |
+          npm ci
+          npm run build
 
-    # 6. Deploy the artifact to AWS Amplify via CLI
-    - name: Publish Artifact to Amplify
-      run: |
-        aws amplify start-deployment \
-          --app-id d1fcddosbju942 \
-          --branch-name main \
-          --source-url "$URL"
+      - name: Zip and Upload to S3
+        run: |
+          cd dist
+          zip -r ../deploy.zip .
+          cd ..
+          aws s3 cp deploy.zip s3://mys3bucket02071992/deploy.zip
+          URL=$(aws s3 presign s3://mys3bucket02071992/deploy.zip --expires-in 600)
+          echo "DEPLOY_URL=$URL" >> $GITHUB_ENV
+
+      - name: Publish Artifact to Amplify
+        run: |
+          aws amplify start-deployment \
+            --app-id d1fcddosbju942 \
+            --branch-name main \
+            --source-url "${{ env.DEPLOY_URL }}"
