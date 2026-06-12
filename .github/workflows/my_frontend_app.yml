@@ -42,6 +42,6 @@ jobs:
       - name: Publish Artifact to Amplify
         run: |
           aws amplify start-deployment \
-            --app-id d1fcddosbju942 \
+            --app-id daej0ec32nb5y \
             --branch-name main \
             --source-url "${{ env.DEPLOY_URL }}"
